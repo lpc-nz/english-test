@@ -1,0 +1,1264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GrammarIQ — English Grammar Test</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #f1f5f9;
+      --surface:      #ffffff;
+      --border:       rgba(15, 23, 42, 0.08);
+      --text-1:       #0f172a;
+      --text-2:       #475569;
+      --text-3:       #94a3b8;
+      --accent:       #0d9488;
+      --accent-light: #ccfbf1;
+      --correct:      #059669;
+      --correct-bg:   #d1fae5;
+      --wrong:        #dc2626;
+      --wrong-bg:     #fee2e2;
+      --radius:       20px;
+      --shadow:       0 25px 50px -12px rgba(0,0,0,0.07);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg);
+      min-height: 100dvh;
+      color: var(--text-1);
+      overflow-x: hidden;
+    }
+
+    /* ─── Screen management ───────────────────────────────── */
+    .screen { display: none; min-height: 100dvh; }
+    .screen.active { display: flex; }
+
+    /* ─── START SCREEN ───────────────────────────────────── */
+    #start-screen { align-items: stretch; }
+
+    .start-left {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 80px 64px;
+    }
+
+    .start-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent-light);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border-radius: 999px;
+      margin-bottom: 36px;
+      width: fit-content;
+    }
+
+    .start-title {
+      font-size: clamp(44px, 6vw, 76px);
+      font-weight: 800;
+      line-height: 1.0;
+      letter-spacing: -0.035em;
+      margin-bottom: 22px;
+    }
+    .start-title .accent { color: var(--accent); }
+
+    .start-sub {
+      font-size: 17px;
+      color: var(--text-2);
+      line-height: 1.65;
+      max-width: 460px;
+      margin-bottom: 52px;
+    }
+
+    .start-meta {
+      display: flex;
+      gap: 0;
+      margin-bottom: 52px;
+    }
+    .meta-item {
+      flex: 1;
+      max-width: 120px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding-right: 32px;
+      border-right: 1px solid var(--border);
+      margin-right: 32px;
+    }
+    .meta-item:last-child { border-right: none; }
+    .meta-value { font-size: 30px; font-weight: 800; letter-spacing: -0.03em; }
+    .meta-label { font-size: 12px; color: var(--text-3); font-weight: 500; }
+
+    .btn-start {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--text-1);
+      color: #fff;
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      font-weight: 600;
+      padding: 18px 34px;
+      border-radius: 14px;
+      border: none;
+      cursor: pointer;
+      transition: background 0.22s, transform 0.2s cubic-bezier(0.16,1,0.3,1);
+      width: fit-content;
+      letter-spacing: -0.01em;
+    }
+    .btn-start:hover  { background: var(--accent); transform: translateY(-2px); }
+    .btn-start:active { transform: scale(0.97); }
+    .btn-start svg { transition: transform 0.2s; }
+    .btn-start:hover svg { transform: translateX(4px); }
+
+    .start-right {
+      width: 42%;
+      background: var(--text-1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 52px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Subtle grid decoration on dark panel */
+    .start-right::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+
+    .topic-grid {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+      max-width: 340px;
+    }
+
+    .topic-pill {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 18px 22px;
+      color: rgba(255,255,255,0.75);
+      font-size: 14px;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+    .topic-pill:hover { background: rgba(255,255,255,0.1); }
+
+    .topic-pill-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .topic-pill-text strong {
+      display: block;
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    /* ─── QUIZ SCREEN ────────────────────────────────────── */
+    #quiz-screen {
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .quiz-header {
+      width: 100%;
+      max-width: 760px;
+      padding: 36px 28px 0;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .q-counter {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-3);
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+    .q-counter b { color: var(--text-1); }
+
+    .progress-track {
+      flex: 1;
+      height: 4px;
+      background: rgba(15,23,42,0.08);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 999px;
+      transition: width 0.5s cubic-bezier(0.16,1,0.3,1);
+    }
+
+    .topic-badge {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      background: var(--accent-light);
+      color: var(--accent);
+      padding: 5px 12px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    .quiz-body {
+      flex: 1;
+      width: 100%;
+      max-width: 760px;
+      padding: 28px 28px 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .card-wrap { overflow: hidden; }
+
+    .question-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 48px 52px;
+      box-shadow: var(--shadow);
+    }
+
+    .q-label {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 14px;
+    }
+
+    .q-text {
+      font-size: 21px;
+      font-weight: 600;
+      line-height: 1.45;
+      letter-spacing: -0.01em;
+      margin-bottom: 36px;
+      color: var(--text-1);
+    }
+
+    .options-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .opt-btn {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 16px 20px;
+      border: 1.5px solid var(--border);
+      border-radius: 14px;
+      background: var(--bg);
+      cursor: pointer;
+      text-align: left;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text-1);
+      transition: border-color 0.18s, background 0.18s, transform 0.15s cubic-bezier(0.16,1,0.3,1);
+      width: 100%;
+      line-height: 1.45;
+    }
+    .opt-btn:hover:not(:disabled) {
+      border-color: var(--accent);
+      background: var(--accent-light);
+      transform: translateX(4px);
+    }
+    .opt-btn:active:not(:disabled) { transform: scale(0.99); }
+    .opt-btn:disabled { cursor: default; }
+
+    .opt-letter {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      min-width: 30px;
+      border-radius: 9px;
+      background: var(--border);
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--text-2);
+      transition: background 0.18s, color 0.18s;
+    }
+    .opt-btn:hover:not(:disabled) .opt-letter {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* Answer states */
+    .opt-btn.is-correct { border-color: var(--correct); background: var(--correct-bg); }
+    .opt-btn.is-correct .opt-letter { background: var(--correct); color: #fff; }
+
+    .opt-btn.is-wrong { border-color: var(--wrong); background: var(--wrong-bg); }
+    .opt-btn.is-wrong .opt-letter { background: var(--wrong); color: #fff; }
+
+    /* Feedback bar */
+    .feedback {
+      margin-top: 20px;
+      padding: 14px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      opacity: 0;
+      transform: translateY(6px);
+      transition: opacity 0.28s ease, transform 0.28s ease;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .feedback.visible { opacity: 1; transform: translateY(0); }
+    .feedback.correct { background: var(--correct-bg); color: var(--correct); }
+    .feedback.wrong   { background: var(--wrong-bg);   color: var(--wrong); }
+
+    /* ─── Quiz footer ─── */
+    .quiz-footer {
+      width: 100%;
+      max-width: 760px;
+      padding: 0 28px 44px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .btn-nav {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 14px 24px;
+      border-radius: 13px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-1);
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16,1,0.3,1);
+      letter-spacing: -0.01em;
+    }
+    .btn-nav:hover:not(:disabled) { border-color: var(--text-1); transform: translateY(-1px); }
+    .btn-nav:active:not(:disabled) { transform: scale(0.97); }
+    .btn-nav:disabled { opacity: 0.3; cursor: default; pointer-events: none; }
+
+    .btn-nav.primary {
+      background: var(--text-1);
+      border-color: var(--text-1);
+      color: #fff;
+    }
+    .btn-nav.primary:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); }
+
+    .btn-nav.submit {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    .btn-nav.submit:hover:not(:disabled) { background: #0f766e; border-color: #0f766e; }
+
+    /* Progress dots */
+    .dots {
+      display: flex;
+      gap: 5px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 260px;
+    }
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 999px;
+      background: rgba(15,23,42,0.12);
+      transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+      flex-shrink: 0;
+    }
+    .dot.current  { width: 22px; background: var(--accent); }
+    .dot.answered { background: var(--text-3); }
+    .dot.correct  { background: var(--correct); }
+    .dot.wrong    { background: var(--wrong); }
+
+    /* ─── RESULTS SCREEN ────────────────────────────────── */
+    #results-screen {
+      flex-direction: column;
+      align-items: center;
+      padding: 64px 28px 80px;
+    }
+
+    .results-top {
+      width: 100%;
+      max-width: 760px;
+      margin-bottom: 56px;
+    }
+
+    .results-eyebrow {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 16px;
+    }
+
+    .score-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .score-big {
+      font-size: clamp(72px, 14vw, 112px);
+      font-weight: 800;
+      letter-spacing: -0.045em;
+      line-height: 1;
+    }
+    .score-denom {
+      font-size: 36px;
+      font-weight: 400;
+      color: var(--text-3);
+      letter-spacing: -0.02em;
+    }
+
+    .results-msg {
+      font-size: 18px;
+      color: var(--text-2);
+      font-weight: 500;
+      margin-bottom: 40px;
+      line-height: 1.5;
+      max-width: 520px;
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 0;
+      align-items: stretch;
+      margin-bottom: 44px;
+    }
+    .stat {
+      flex: 1;
+      max-width: 120px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      padding-right: 32px;
+      border-right: 1px solid var(--border);
+      margin-right: 32px;
+    }
+    .stat:last-child { border-right: none; }
+    .stat-val {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+    .stat-val.green { color: var(--correct); }
+    .stat-val.red   { color: var(--wrong); }
+    .stat-val.teal  { color: var(--accent); }
+    .stat-lbl { font-size: 12px; color: var(--text-3); font-weight: 500; }
+
+    .btn-retake {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 14px 26px;
+      border-radius: 13px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-1);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-retake:hover { border-color: var(--text-1); transform: translateY(-1px); }
+    .btn-retake:active { transform: scale(0.97); }
+
+    /* Explanation cards */
+    .explanations-section {
+      width: 100%;
+      max-width: 760px;
+    }
+
+    .section-label {
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 20px;
+    }
+
+    .exp-list { display: flex; flex-direction: column; gap: 12px; }
+
+    .exp-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    .exp-head {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 20px 26px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .exp-head:hover { background: var(--bg); }
+
+    .status-dot {
+      width: 9px; height: 9px;
+      min-width: 9px;
+      border-radius: 999px;
+    }
+    .status-dot.correct { background: var(--correct); }
+    .status-dot.wrong   { background: var(--wrong); }
+
+    .exp-qnum {
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--text-3);
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      min-width: 52px;
+    }
+
+    .exp-question {
+      flex: 1;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-1);
+      line-height: 1.4;
+    }
+
+    .exp-chevron {
+      color: var(--text-3);
+      transition: transform 0.25s cubic-bezier(0.16,1,0.3,1);
+      flex-shrink: 0;
+    }
+    .exp-card.open .exp-chevron { transform: rotate(180deg); }
+
+    .exp-body {
+      display: none;
+      padding: 0 26px 26px;
+      border-top: 1px solid var(--border);
+    }
+    .exp-card.open .exp-body { display: block; }
+
+    .answers-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      padding: 18px 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 18px;
+    }
+
+    .ans-block-label {
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .ans-block-label.yours   { color: var(--text-3); }
+    .ans-block-label.correct { color: var(--correct); }
+
+    .ans-block-val {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-1);
+      line-height: 1.4;
+    }
+
+    .explanation-text {
+      font-size: 14px;
+      line-height: 1.75;
+      color: var(--text-2);
+    }
+    .explanation-text strong { color: var(--text-1); font-weight: 700; }
+    .explanation-text .tag {
+      display: inline-block;
+      background: var(--accent-light);
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+    }
+
+    /* ─── Responsive ────────────────────────────────────── */
+    @media (max-width: 860px) {
+      .start-right { display: none; }
+      .start-left { padding: 56px 28px; }
+    }
+
+    @media (max-width: 640px) {
+      .start-left { padding: 48px 24px; }
+      .quiz-header, .quiz-body, .quiz-footer { padding-left: 16px; padding-right: 16px; }
+      .question-card { padding: 28px 24px; }
+      .q-text { font-size: 18px; }
+      .topic-badge { display: none; }
+      #results-screen { padding: 44px 16px 60px; }
+      .answers-row { grid-template-columns: 1fr; }
+      .exp-head { padding: 16px 18px; }
+      .exp-body { padding: 0 18px 22px; }
+    }
+
+    @media (max-width: 400px) {
+      .btn-nav { padding: 12px 16px; font-size: 14px; }
+    }
+
+    /* ─── Entrance animations ──────────────────────────── */
+    @keyframes up-in {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    #start-screen.active .start-badge    { animation: up-in 0.5s 0.05s both cubic-bezier(0.16,1,0.3,1); }
+    #start-screen.active .start-title    { animation: up-in 0.5s 0.12s both cubic-bezier(0.16,1,0.3,1); }
+    #start-screen.active .start-sub      { animation: up-in 0.5s 0.18s both cubic-bezier(0.16,1,0.3,1); }
+    #start-screen.active .start-meta     { animation: up-in 0.5s 0.24s both cubic-bezier(0.16,1,0.3,1); }
+    #start-screen.active .btn-start      { animation: up-in 0.5s 0.30s both cubic-bezier(0.16,1,0.3,1); }
+    #start-screen.active .topic-pill     { animation: up-in 0.5s both cubic-bezier(0.16,1,0.3,1); }
+    #start-screen.active .topic-pill:nth-child(1) { animation-delay: 0.15s; }
+    #start-screen.active .topic-pill:nth-child(2) { animation-delay: 0.22s; }
+    #start-screen.active .topic-pill:nth-child(3) { animation-delay: 0.29s; }
+    #start-screen.active .topic-pill:nth-child(4) { animation-delay: 0.36s; }
+    #start-screen.active .topic-pill:nth-child(5) { animation-delay: 0.43s; }
+
+    #results-screen.active .results-top { animation: up-in 0.5s 0.05s both cubic-bezier(0.16,1,0.3,1); }
+    #results-screen.active .explanations-section { animation: up-in 0.5s 0.18s both cubic-bezier(0.16,1,0.3,1); }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     START SCREEN
+═══════════════════════════════════════════════════════ -->
+<div id="start-screen" class="screen active">
+  <div class="start-left">
+    <div class="start-badge">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+      </svg>
+      English Grammar
+    </div>
+
+    <h1 class="start-title">
+      Test your<br>
+      <span class="accent">grammar</span><br>
+      skills.
+    </h1>
+
+    <p class="start-sub">
+      10 questions covering essential grammar rules. Answer each question, then get a detailed explanation in Vietnamese to understand exactly why.
+    </p>
+
+    <div class="start-meta">
+      <div class="meta-item">
+        <span class="meta-value">10</span>
+        <span class="meta-label">Questions</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-value">~5</span>
+        <span class="meta-label">Minutes</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-value">VI</span>
+        <span class="meta-label">Explanations</span>
+      </div>
+    </div>
+
+    <button class="btn-start" onclick="startTest()">
+      Start Test
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="start-right">
+    <div class="topic-grid">
+      <div class="topic-pill">
+        <div class="topic-pill-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </div>
+        <div class="topic-pill-text"><strong>Tenses</strong>Present, Past, Perfect</div>
+      </div>
+      <div class="topic-pill">
+        <div class="topic-pill-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+        </div>
+        <div class="topic-pill-text"><strong>Modal Verbs</strong>Can, Must, Should</div>
+      </div>
+      <div class="topic-pill">
+        <div class="topic-pill-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+        <div class="topic-pill-text"><strong>Subject-Verb Agreement</strong>Singular &amp; Plural</div>
+      </div>
+      <div class="topic-pill">
+        <div class="topic-pill-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+          </svg>
+        </div>
+        <div class="topic-pill-text"><strong>Conditionals &amp; Passive</strong>Type 2, Modal Passive</div>
+      </div>
+      <div class="topic-pill">
+        <div class="topic-pill-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+          </svg>
+        </div>
+        <div class="topic-pill-text"><strong>Gerunds &amp; Infinitives</strong>Verb + -ing / to-V</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     QUIZ SCREEN
+═══════════════════════════════════════════════════════ -->
+<div id="quiz-screen" class="screen">
+  <div class="quiz-header">
+    <span class="q-counter">Q <b id="q-cur">1</b> / 10</span>
+    <div class="progress-track">
+      <div class="progress-fill" id="prog-fill" style="width:10%"></div>
+    </div>
+    <span class="topic-badge" id="q-topic"></span>
+  </div>
+
+  <div class="quiz-body">
+    <div class="card-wrap">
+      <div class="question-card" id="q-card">
+        <div class="q-label" id="q-label">QUESTION 01</div>
+        <p class="q-text" id="q-text"></p>
+        <div class="options-list" id="opts-list"></div>
+        <div class="feedback" id="feedback"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="quiz-footer">
+    <button class="btn-nav" id="btn-prev" onclick="prevQ()" disabled>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/>
+      </svg>
+      Previous
+    </button>
+
+    <div class="dots" id="dots"></div>
+
+    <button class="btn-nav primary" id="btn-next" onclick="nextQ()" disabled>
+      Next
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+      </svg>
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     RESULTS SCREEN
+═══════════════════════════════════════════════════════ -->
+<div id="results-screen" class="screen">
+  <div class="results-top">
+    <div class="results-eyebrow">Test Complete</div>
+    <div class="score-row">
+      <span class="score-big" id="r-score">0</span>
+      <span class="score-denom">/ 10</span>
+    </div>
+    <p class="results-msg" id="r-msg"></p>
+    <div class="stats-row">
+      <div class="stat">
+        <span class="stat-val green" id="r-correct">0</span>
+        <span class="stat-lbl">Correct</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val red" id="r-wrong">0</span>
+        <span class="stat-lbl">Incorrect</span>
+      </div>
+      <div class="stat">
+        <span class="stat-val teal" id="r-pct">0%</span>
+        <span class="stat-lbl">Accuracy</span>
+      </div>
+    </div>
+    <button class="btn-retake" onclick="retake()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.54"/>
+      </svg>
+      Retake Test
+    </button>
+  </div>
+
+  <div class="explanations-section">
+    <div class="section-label">Review &amp; Explanations</div>
+    <div class="exp-list" id="exp-list"></div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════
+   QUIZ DATA
+══════════════════════════════════════════════════════ */
+const QS = [
+  {
+    q: "Choose the grammatically correct sentence:",
+    opts: [
+      "She don't like coffee.",
+      "She doesn't like coffee.",
+      "She didn't likes coffee.",
+      "She not like coffee."
+    ],
+    ans: 1,
+    topic: "Present Simple",
+    expl: `<span class="tag">Thì hiện tại đơn</span>
+      <strong>Đáp án đúng: "She doesn't like coffee."</strong><br><br>
+      Trong thì hiện tại đơn (Present Simple), với chủ ngữ ngôi thứ 3 số ít (he / she / it), câu phủ định bắt buộc dùng <strong>doesn't</strong> (does + not), không dùng "don't".<br><br>
+      <strong>Cấu trúc:</strong> He / She / It + <strong>doesn't</strong> + V (nguyên thể)<br>
+      I / You / We / They + don't + V<br><br>
+      Ví dụ: He <strong>doesn't</strong> eat meat. / They <strong>don't</strong> work here.`
+  },
+  {
+    q: "_____ you speak any foreign language?",
+    opts: ["Do", "Can", "Are", "Have"],
+    ans: 1,
+    topic: "Modal Verbs",
+    expl: `<span class="tag">Động từ khiếm khuyết</span>
+      <strong>Đáp án đúng: "Can you speak any foreign language?"</strong><br><br>
+      <strong>"Can"</strong> là động từ khiếm khuyết (modal verb) dùng để hỏi về <strong>khả năng</strong>. "Do" hỏi về thói quen, "Are" dùng với thì tiếp diễn, "Have" dùng với thì hoàn thành.<br><br>
+      <strong>Cấu trúc:</strong> Can + S + V (nguyên thể)?<br>
+      Ví dụ: Can she drive? / Can they swim?`
+  },
+  {
+    q: "She _____ to school every day when she was young.",
+    opts: ["walks", "is walking", "walked", "has walked"],
+    ans: 2,
+    topic: "Past Simple",
+    expl: `<span class="tag">Thì quá khứ đơn</span>
+      <strong>Đáp án đúng: "She walked to school every day when she was young."</strong><br><br>
+      Dấu hiệu <strong>"when she was young"</strong> cho biết đây là thói quen đã kết thúc trong quá khứ → dùng thì quá khứ đơn (Past Simple).<br><br>
+      <strong>Cấu trúc:</strong> S + V-ed / V2<br>
+      "walks" (hiện tại đơn) và "has walked" (hiện tại hoàn thành) đều sai vì có mốc thời gian trong quá khứ.`
+  },
+  {
+    q: "By the time she arrived at the party, everyone _____ home.",
+    opts: ["went", "has gone", "had gone", "was going"],
+    ans: 2,
+    topic: "Past Perfect",
+    expl: `<span class="tag">Thì quá khứ hoàn thành</span>
+      <strong>Đáp án đúng: "everyone had gone home."</strong><br><br>
+      Thì quá khứ hoàn thành (<strong>had + V3</strong>) diễn tả hành động xảy ra <strong>trước</strong> một hành động khác trong quá khứ. Mọi người về nhà TRƯỚC khi cô ấy đến.<br><br>
+      <strong>Quy tắc:</strong> By the time + quá khứ đơn → mệnh đề chính dùng quá khứ hoàn thành.<br>
+      Ví dụ: By the time I called, she <strong>had left</strong>.`
+  },
+  {
+    q: "If I _____ you, I would apologize immediately.",
+    opts: ["am", "was", "were", "had been"],
+    ans: 2,
+    topic: "Conditionals",
+    expl: `<span class="tag">Câu điều kiện loại 2</span>
+      <strong>Đáp án đúng: "If I were you, I would apologize immediately."</strong><br><br>
+      Câu điều kiện loại 2 giả định điều không có thật ở hiện tại. Trong mệnh đề If, dùng <strong>"were"</strong> cho tất cả các ngôi (kể cả I/he/she/it) trong văn chuẩn.<br><br>
+      <strong>Cấu trúc:</strong> If + S + <strong>were</strong> ..., S + would + V<br>
+      Lưu ý: "was" có thể gặp trong khẩu ngữ nhưng "were" là chuẩn ngữ pháp.`
+  },
+  {
+    q: "She suggested _____ to the new Italian restaurant downtown.",
+    opts: ["to go", "go", "going", "gone"],
+    ans: 2,
+    topic: "Gerunds",
+    expl: `<span class="tag">Danh động từ (Gerund)</span>
+      <strong>Đáp án đúng: "She suggested going to the new Italian restaurant."</strong><br><br>
+      Sau động từ <strong>"suggest"</strong>, bắt buộc dùng <strong>V-ing</strong> (gerund), không dùng to-infinitive.<br><br>
+      <strong>Các động từ tương tự + V-ing:</strong><br>
+      enjoy, avoid, mind, consider, finish, recommend, admit, deny, keep, practice...<br>
+      Ví dụ: He suggested <strong>taking</strong> a taxi. / She avoided <strong>talking</strong> to him.`
+  },
+  {
+    q: "Neither the manager nor the employees _____ informed about the change.",
+    opts: ["was", "were", "has been", "is"],
+    ans: 1,
+    topic: "Subject-Verb Agreement",
+    expl: `<span class="tag">Chia động từ – Neither...nor</span>
+      <strong>Đáp án đúng: "Neither the manager nor the employees were informed."</strong><br><br>
+      Với cấu trúc <strong>Neither...nor...</strong>, động từ chia theo danh từ <strong>gần nhất</strong> (quy tắc "proximity"). Danh từ gần nhất là <strong>"the employees"</strong> (số nhiều) → dùng "were".<br><br>
+      <strong>So sánh:</strong> "Neither the employees nor the manager <strong>was</strong> informed." (manager số ít → was)<br>
+      Tương tự: Either...or, Not only...but also, As well as...`
+  },
+  {
+    q: "The annual report must _____ to the board by next Friday.",
+    opts: ["submit", "be submitted", "submitted", "submitting"],
+    ans: 1,
+    topic: "Passive Voice",
+    expl: `<span class="tag">Câu bị động – Modal</span>
+      <strong>Đáp án đúng: "The annual report must be submitted to the board."</strong><br><br>
+      Câu bị động với động từ khiếm khuyết: <strong>modal + be + V3</strong>.<br><br>
+      <strong>Cấu trúc:</strong> S + modal + <strong>be</strong> + V3<br>
+      Ví dụ: The project must <strong>be completed</strong>. / The form should <strong>be filled</strong> out. / Documents can <strong>be sent</strong> by email.`
+  },
+  {
+    q: "I _____ this city before, so I know my way around perfectly.",
+    opts: ["visited", "had visited", "have visited", "was visiting"],
+    ans: 2,
+    topic: "Present Perfect",
+    expl: `<span class="tag">Thì hiện tại hoàn thành</span>
+      <strong>Đáp án đúng: "I have visited this city before."</strong><br><br>
+      Thì hiện tại hoàn thành (<strong>have/has + V3</strong>) diễn tả kinh nghiệm từ trước đến nay, không xác định thời điểm cụ thể. Từ <strong>"before"</strong> là dấu hiệu đặc trưng.<br><br>
+      <strong>Phân biệt:</strong> "I visited this city <strong>last year</strong>" (thời điểm xác định → quá khứ đơn)<br>
+      <strong>Các trạng từ thường gặp:</strong> ever, never, already, yet, recently, before, so far`
+  },
+  {
+    q: "The students, along with their teacher, _____ excited about the upcoming trip.",
+    opts: ["are", "is", "were being", "has been"],
+    ans: 0,
+    topic: "Subject-Verb Agreement",
+    expl: `<span class="tag">Chia động từ – Along with</span>
+      <strong>Đáp án đúng: "The students, along with their teacher, are excited."</strong><br><br>
+      Cụm <strong>"along with"</strong> là giới từ bổ sung, không phải liên từ nối chủ ngữ. Chủ ngữ thực sự vẫn là <strong>"The students"</strong> (số nhiều) → động từ chia số nhiều: <strong>"are"</strong>.<br><br>
+      <strong>Tương tự:</strong> together with, as well as, in addition to, accompanied by<br>
+      Ví dụ: The teacher, along with the students, <strong>is</strong> waiting. (teacher = số ít → is)`
+  }
+];
+
+/* ═══════════════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════════════ */
+let cur = 0;
+let answers = new Array(QS.length).fill(null);
+let busy = false;
+
+/* ═══════════════════════════════════════════════════════
+   SCREENS
+══════════════════════════════════════════════════════ */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+/* ═══════════════════════════════════════════════════════
+   START
+══════════════════════════════════════════════════════ */
+function startTest() {
+  showScreen('quiz-screen');
+  buildDots();
+  renderQ(0, 'none');
+}
+
+/* ═══════════════════════════════════════════════════════
+   RENDER QUESTION (with slide animation)
+══════════════════════════════════════════════════════ */
+function renderQ(idx, dir) {
+  const card = document.getElementById('q-card');
+
+  function populate() {
+    const data = QS[idx];
+
+    // Header
+    document.getElementById('q-cur').textContent  = idx + 1;
+    document.getElementById('q-topic').textContent = data.topic;
+    document.getElementById('prog-fill').style.width = `${((idx + 1) / QS.length) * 100}%`;
+    document.getElementById('q-label').textContent  = `QUESTION ${String(idx + 1).padStart(2,'0')}`;
+    document.getElementById('q-text').textContent   = data.q;
+
+    // Options
+    const list = document.getElementById('opts-list');
+    list.innerHTML = '';
+    const L = ['A','B','C','D'];
+    data.opts.forEach((opt, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'opt-btn';
+      btn.innerHTML = `<span class="opt-letter">${L[i]}</span><span>${opt}</span>`;
+      btn.onclick = () => pick(i);
+
+      if (answers[idx] !== null) {
+        btn.disabled = true;
+        if (i === data.ans)        btn.classList.add('is-correct');
+        else if (i === answers[idx]) btn.classList.add('is-wrong');
+      }
+      list.appendChild(btn);
+    });
+
+    // Feedback
+    const fb = document.getElementById('feedback');
+    if (answers[idx] !== null) {
+      const ok = answers[idx] === data.ans;
+      fb.innerHTML = ok
+        ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Correct!`
+        : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Incorrect — the correct answer is ${L[data.ans]}.`;
+      fb.className = `feedback ${ok ? 'correct' : 'wrong'} visible`;
+    } else {
+      fb.className = 'feedback';
+      fb.innerHTML = '';
+    }
+
+    updateNav();
+    updateDots();
+  }
+
+  if (dir === 'none') {
+    card.style.transition = 'none';
+    card.style.transform  = 'translateX(0)';
+    card.style.opacity    = '1';
+    populate();
+    busy = false;
+    return;
+  }
+
+  // Animate out
+  card.style.transition = 'transform 0.3s cubic-bezier(0.4,0,1,1), opacity 0.25s ease';
+  card.style.transform  = dir === 'next' ? 'translateX(-52px)' : 'translateX(52px)';
+  card.style.opacity    = '0';
+
+  setTimeout(() => {
+    populate();
+    // Position card on opposite side instantly
+    card.style.transition = 'none';
+    card.style.transform  = dir === 'next' ? 'translateX(52px)' : 'translateX(-52px)';
+    card.style.opacity    = '0';
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        card.style.transition = 'transform 0.42s cubic-bezier(0.16,1,0.3,1), opacity 0.35s ease';
+        card.style.transform  = 'translateX(0)';
+        card.style.opacity    = '1';
+        busy = false;
+      });
+    });
+  }, 280);
+}
+
+/* ═══════════════════════════════════════════════════════
+   PICK ANSWER
+══════════════════════════════════════════════════════ */
+function pick(idx) {
+  if (answers[cur] !== null) return;
+  answers[cur] = idx;
+
+  const data = QS[cur];
+  const L    = ['A','B','C','D'];
+  const btns = document.querySelectorAll('.opt-btn');
+
+  btns.forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === data.ans)   btn.classList.add('is-correct');
+    else if (i === idx)   btn.classList.add('is-wrong');
+  });
+
+  const ok = idx === data.ans;
+  const fb = document.getElementById('feedback');
+  fb.innerHTML = ok
+    ? `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Correct!`
+    : `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Incorrect — the correct answer is ${L[data.ans]}.`;
+  fb.className = `feedback ${ok ? 'correct' : 'wrong'} visible`;
+
+  updateNav();
+  updateDots();
+}
+
+/* ═══════════════════════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════════════════════ */
+function nextQ() {
+  if (busy) return;
+  if (cur < QS.length - 1) {
+    busy = true;
+    cur++;
+    renderQ(cur, 'next');
+  } else {
+    showResults();
+  }
+}
+
+function prevQ() {
+  if (busy || cur === 0) return;
+  busy = true;
+  cur--;
+  renderQ(cur, 'prev');
+}
+
+function updateNav() {
+  const prev = document.getElementById('btn-prev');
+  const next = document.getElementById('btn-next');
+  const answered = answers[cur] !== null;
+  const last     = cur === QS.length - 1;
+
+  prev.disabled = cur === 0;
+  next.disabled = !answered;
+
+  if (last) {
+    next.className = 'btn-nav submit';
+    next.innerHTML = `Submit
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>`;
+  } else {
+    next.className = 'btn-nav primary';
+    next.innerHTML = `Next
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+      </svg>`;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════
+   DOTS
+══════════════════════════════════════════════════════ */
+function buildDots() {
+  const c = document.getElementById('dots');
+  c.innerHTML = '';
+  QS.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot';
+    d.id = `dot-${i}`;
+    c.appendChild(d);
+  });
+  updateDots();
+}
+
+function updateDots() {
+  QS.forEach((q, i) => {
+    const d = document.getElementById(`dot-${i}`);
+    if (!d) return;
+    d.className = 'dot';
+    if (i === cur) {
+      d.classList.add('current');
+    } else if (answers[i] !== null) {
+      d.classList.add(answers[i] === q.ans ? 'correct' : 'wrong');
+    } else if (i < cur) {
+      d.classList.add('answered');
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════════════
+   RESULTS
+══════════════════════════════════════════════════════ */
+function showResults() {
+  const correct = answers.filter((a, i) => a === QS[i].ans).length;
+  const wrong   = QS.length - correct;
+  const pct     = Math.round((correct / QS.length) * 100);
+
+  document.getElementById('r-score').textContent   = correct;
+  document.getElementById('r-correct').textContent = correct;
+  document.getElementById('r-wrong').textContent   = wrong;
+  document.getElementById('r-pct').textContent     = `${pct}%`;
+
+  const msgs = [
+    [100, "Flawless — a perfect score!"],
+    [80,  "Excellent work. You have a strong command of English grammar."],
+    [60,  "Good effort. Review the explanations below to fill the gaps."],
+    [40,  "Keep practicing — the explanations below will help you improve."],
+    [0,   "Don't give up. Study each explanation carefully and try again."]
+  ];
+  document.getElementById('r-msg').textContent = msgs.find(([t]) => pct >= t)[1];
+
+  // Build explanation cards
+  const L    = ['A','B','C','D'];
+  const list = document.getElementById('exp-list');
+  list.innerHTML = '';
+
+  QS.forEach((q, i) => {
+    const ok   = answers[i] === q.ans;
+    const card = document.createElement('div');
+    card.className = 'exp-card';
+    card.innerHTML = `
+      <div class="exp-head" onclick="toggleExp(this)">
+        <div class="status-dot ${ok ? 'correct' : 'wrong'}"></div>
+        <div class="exp-qnum">Q${String(i+1).padStart(2,'0')}</div>
+        <div class="exp-question">${q.q}</div>
+        <svg class="exp-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </div>
+      <div class="exp-body">
+        <div class="answers-row">
+          <div>
+            <div class="ans-block-label yours">Your Answer</div>
+            <div class="ans-block-val ${ok ? '' : 'wrong-ans'}">
+              ${answers[i] !== null ? `${L[answers[i]]}. ${q.opts[answers[i]]}` : '—'}
+            </div>
+          </div>
+          <div>
+            <div class="ans-block-label correct">Correct Answer</div>
+            <div class="ans-block-val">${L[q.ans]}. ${q.opts[q.ans]}</div>
+          </div>
+        </div>
+        <div class="explanation-text">${q.expl}</div>
+      </div>`;
+    list.appendChild(card);
+  });
+
+  showScreen('results-screen');
+}
+
+function toggleExp(head) {
+  head.parentElement.classList.toggle('open');
+}
+
+/* ═══════════════════════════════════════════════════════
+   RETAKE
+══════════════════════════════════════════════════════ */
+function retake() {
+  cur     = 0;
+  answers = new Array(QS.length).fill(null);
+  busy    = false;
+  startTest();
+}
+</script>
+</body>
+</html>
