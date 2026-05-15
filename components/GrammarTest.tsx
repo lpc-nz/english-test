@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ArrowRight,
@@ -13,7 +13,8 @@ import {
   Clock,
   Globe,
 } from '@phosphor-icons/react';
-import { QS } from '@/data/questions';
+import Link from 'next/link';
+import type { Question, QuizConfig } from '@/types/quiz';
 
 const LETTERS = ['A', 'B', 'C', 'D'] as const;
 
@@ -51,27 +52,63 @@ export default function GrammarTest() {
   const [screen, setScreen] = useState<'start' | 'quiz' | 'results'>('start');
   const [cur, setCur] = useState(0);
   const [dir, setDir] = useState(1);
-  const [answers, setAnswers] = useState<(number | null)[]>(() => Array(QS.length).fill(null));
-  const [openCards, setOpenCards] = useState<boolean[]>(() => Array(QS.length).fill(false));
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [answers, setAnswers] = useState<(number | null)[]>([]);
+  const [openCards, setOpenCards] = useState<boolean[]>([]);
+  const [topics, setTopics] = useState<string[]>([]);
+  const [config, setConfig] = useState<QuizConfig>({ count: 10, topic: null });
+  const [loading, setLoading] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [timerActive, setTimerActive] = useState(false);
 
-  const resetAndStart = () => {
-    setCur(0);
-    setDir(1);
-    setAnswers(Array(QS.length).fill(null));
-    setOpenCards(Array(QS.length).fill(false));
-    setScreen('quiz');
+  useEffect(() => {
+    fetch('/api/topics')
+      .then(r => r.json())
+      .then(setTopics)
+      .catch(() => {});
+  }, []);
+
+  // Countdown — ticks every second while timerActive; auto-submits at 0
+  useEffect(() => {
+    if (!timerActive) return;
+    if (timeLeft <= 0) {
+      setTimerActive(false);
+      setScreen('results');
+      return;
+    }
+    const id = setTimeout(() => setTimeLeft(t => t - 1), 1000);
+    return () => clearTimeout(id);
+  }, [timeLeft, timerActive]);
+
+  const startQuiz = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ count: String(config.count) });
+      if (config.topic) params.set('topic', config.topic);
+      const qs: Question[] = await fetch(`/api/questions?${params}`).then(r => r.json());
+      setQuestions(qs);
+      setAnswers(Array(qs.length).fill(null));
+      setOpenCards(Array(qs.length).fill(false));
+      setCur(0);
+      setDir(1);
+      setTimeLeft(config.count === 10 ? 300 : 1200);
+      setTimerActive(true);
+      setScreen('quiz');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const pickAnswer = (idx: number) => {
-    if (answers[cur] !== null) return;
     setAnswers(a => a.map((v, i) => (i === cur ? idx : v)));
   };
 
   const goNext = () => {
-    if (cur < QS.length - 1) {
+    if (cur < questions.length - 1) {
       setDir(1);
       setCur(c => c + 1);
     } else {
+      setTimerActive(false);
       setScreen('results');
     }
   };
@@ -86,21 +123,30 @@ export default function GrammarTest() {
     setOpenCards(o => o.map((v, idx) => (idx === i ? !v : v)));
   };
 
-  const correctCount = answers.filter((a, i) => a === QS[i].ans).length;
-  const pct = Math.round((correctCount / QS.length) * 100);
+  const correctCount = answers.filter((a, i) => a === questions[i]?.ans).length;
+  const pct = questions.length > 0 ? Math.round((correctCount / questions.length) * 100) : 0;
 
   return (
     <div className="min-h-[100dvh] bg-slate-50">
       <AnimatePresence mode="wait">
         {screen === 'start' && (
-          <StartSection key="start" onStart={resetAndStart} />
+          <StartSection
+            key="start"
+            topics={topics}
+            config={config}
+            loading={loading}
+            onConfigChange={setConfig}
+            onStart={startQuiz}
+          />
         )}
         {screen === 'quiz' && (
           <QuizSection
             key="quiz"
+            questions={questions}
             cur={cur}
             dir={dir}
             answers={answers}
+            timeLeft={timeLeft}
             onPick={pickAnswer}
             onNext={goNext}
             onPrev={goPrev}
@@ -109,12 +155,13 @@ export default function GrammarTest() {
         {screen === 'results' && (
           <ResultsSection
             key="results"
+            questions={questions}
             answers={answers}
             correctCount={correctCount}
             pct={pct}
             openCards={openCards}
             onToggle={toggleCard}
-            onRetake={resetAndStart}
+            onRetake={() => setScreen('start')}
           />
         )}
       </AnimatePresence>
@@ -124,8 +171,20 @@ export default function GrammarTest() {
 
 // ── Start Screen ──────────────────────────────────────────────────────────────
 
-function StartSection({ onStart }: { onStart: () => void }) {
-  const topics = [
+function StartSection({
+  topics,
+  config,
+  loading,
+  onConfigChange,
+  onStart,
+}: {
+  topics: string[];
+  config: QuizConfig;
+  loading: boolean;
+  onConfigChange: (c: QuizConfig) => void;
+  onStart: () => void;
+}) {
+  const decorativePanels = [
     {
       icon: <Clock size={18} weight="bold" className="text-white" />,
       title: 'Tenses',
@@ -167,6 +226,9 @@ function StartSection({ onStart }: { onStart: () => void }) {
     },
   ];
 
+  const topicLabel = config.topic ?? 'essential grammar';
+  const minLabel = config.count === 10 ? '~5' : '~20';
+
   return (
     <motion.div
       className="flex min-h-[100dvh]"
@@ -201,10 +263,76 @@ function StartSection({ onStart }: { onStart: () => void }) {
           {...fadeUp}
           animate={{ ...fadeUp.animate }}
           transition={{ delay: 0.15, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="text-[17px] text-slate-500 leading-relaxed max-w-[460px] mb-12"
+          className="text-[17px] text-slate-500 leading-relaxed max-w-[460px] mb-8"
         >
-          10 questions covering essential grammar rules. Answer each question and get a detailed explanation in Vietnamese to understand exactly why.
+          {config.count} questions covering {topicLabel} rules. Answer each question and get a detailed explanation in Vietnamese.
         </motion.p>
+
+        {/* ── Config: count + topic ── */}
+        <motion.div
+          {...fadeUp}
+          animate={{ ...fadeUp.animate }}
+          transition={{ delay: 0.18, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="mb-8 space-y-4"
+        >
+          {/* Count selector */}
+          <div>
+            <span className="text-[11px] font-black text-slate-400 tracking-[0.08em] uppercase mb-2 block">
+              Test Length
+            </span>
+            <div className="flex gap-3">
+              {([
+                { count: 10, label: 'Short', sub: '10 questions · ~5 min' },
+                { count: 40, label: 'Full', sub: '40 questions · ~20 min' },
+              ] as const).map(({ count, label, sub }) => (
+                <button
+                  key={count}
+                  onClick={() => onConfigChange({ ...config, count })}
+                  className={`flex flex-col gap-0.5 px-5 py-3 rounded-xl text-left transition-all duration-150 border-[1.5px] ${
+                    config.count === count
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
+                  }`}
+                >
+                  <span className="text-[14px] font-bold">{label}</span>
+                  <span className={`text-[11px] font-medium ${config.count === count ? 'text-white/60' : 'text-slate-400'}`}>{sub}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Topic selector */}
+          <div>
+            <span className="text-[11px] font-black text-slate-400 tracking-[0.08em] uppercase mb-2 block">
+              Topic
+            </span>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => onConfigChange({ ...config, topic: null })}
+                className={`px-3 py-1.5 rounded-xl text-[13px] font-semibold transition-all duration-150 ${
+                  config.topic === null
+                    ? 'bg-teal-600 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                All Topics
+              </button>
+              {topics.map(t => (
+                <button
+                  key={t}
+                  onClick={() => onConfigChange({ ...config, topic: t })}
+                  className={`px-3 py-1.5 rounded-xl text-[13px] font-semibold transition-all duration-150 ${
+                    config.topic === t
+                      ? 'bg-teal-600 text-white'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+        </motion.div>
 
         <motion.div
           {...fadeUp}
@@ -213,8 +341,8 @@ function StartSection({ onStart }: { onStart: () => void }) {
           className="flex items-stretch mb-12"
         >
           {[
-            { val: '10', lbl: 'Questions' },
-            { val: '~5', lbl: 'Minutes' },
+            { val: String(config.count), lbl: 'Questions' },
+            { val: `~${minLabel}`, lbl: 'Minutes' },
             { val: 'VI', lbl: 'Explanations' },
           ].map((m, i) => (
             <div
@@ -227,20 +355,36 @@ function StartSection({ onStart }: { onStart: () => void }) {
           ))}
         </motion.div>
 
-        <motion.button
+        <motion.div
           {...fadeUp}
           animate={{ ...fadeUp.animate }}
           transition={{ delay: 0.25, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          onClick={onStart}
-          className="inline-flex items-center gap-2.5 bg-slate-900 text-white font-semibold text-[16px] px-8 py-[18px] rounded-2xl w-fit transition-all duration-200 ease-out hover:bg-teal-600 hover:-translate-y-0.5 active:scale-[0.97] group"
+          className="flex items-center gap-5"
         >
-          Start Test
-          <ArrowRight
-            size={18}
-            weight="bold"
-            className="transition-transform duration-200 group-hover:translate-x-1"
-          />
-        </motion.button>
+          <button
+            onClick={onStart}
+            disabled={loading}
+            className="inline-flex items-center gap-2.5 bg-slate-900 text-white font-semibold text-[16px] px-8 py-[18px] rounded-2xl transition-all duration-200 ease-out hover:bg-teal-600 hover:-translate-y-0.5 active:scale-[0.97] group disabled:opacity-70 disabled:pointer-events-none"
+          >
+            {loading ? 'Loading...' : 'Start Test'}
+            {loading ? (
+              <span className="w-[18px] h-[18px] border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <ArrowRight
+                size={18}
+                weight="bold"
+                className="transition-transform duration-200 group-hover:translate-x-1"
+              />
+            )}
+          </button>
+
+          <Link
+            href="/practice"
+            className="text-[14px] font-semibold text-slate-400 hover:text-teal-600 transition-colors"
+          >
+            or Practice Mode →
+          </Link>
+        </motion.div>
       </div>
 
       {/* ── Right decorative panel ── */}
@@ -254,7 +398,7 @@ function StartSection({ onStart }: { onStart: () => void }) {
           }}
         />
         <div className="relative flex flex-col gap-3 w-full max-w-[340px]">
-          {topics.map((t, i) => (
+          {decorativePanels.map((t, i) => (
             <motion.div
               key={t.title}
               initial={{ x: 24, opacity: 0 }}
@@ -280,25 +424,36 @@ function StartSection({ onStart }: { onStart: () => void }) {
 // ── Quiz Screen ───────────────────────────────────────────────────────────────
 
 function QuizSection({
+  questions,
   cur,
   dir,
   answers,
+  timeLeft,
   onPick,
   onNext,
   onPrev,
 }: {
+  questions: Question[];
   cur: number;
   dir: number;
   answers: (number | null)[];
+  timeLeft: number;
   onPick: (i: number) => void;
   onNext: () => void;
   onPrev: () => void;
 }) {
-  const q = QS[cur];
+  const q = questions[cur];
   const userAns = answers[cur];
-  const isAnswered = userAns !== null;
-  const isLast = cur === QS.length - 1;
-  const progress = ((cur + 1) / QS.length) * 100;
+  const hasAnswer = userAns !== null;
+  const isLast = cur === questions.length - 1;
+  const progress = ((cur + 1) / questions.length) * 100;
+
+  const mins = Math.floor(timeLeft / 60);
+  const secs = timeLeft % 60;
+  const timeStr = `${mins}:${String(secs).padStart(2, '0')}`;
+  const isLowTime = timeLeft <= 60;
+
+  if (!q) return null;
 
   return (
     <motion.div
@@ -308,9 +463,9 @@ function QuizSection({
       exit={{ opacity: 0, transition: { duration: 0.15 } }}
     >
       {/* Progress header */}
-      <div className="w-full max-w-2xl px-6 pt-9 flex items-center gap-4">
+      <div className="w-full max-w-2xl px-6 pt-9 flex items-center gap-3">
         <span className="text-[13px] font-bold text-slate-400 whitespace-nowrap tracking-wide">
-          Q <b className="text-slate-900">{cur + 1}</b> / {QS.length}
+          Q <b className="text-slate-900">{cur + 1}</b> / {questions.length}
         </span>
         <div className="flex-1 h-[4px] bg-slate-200 rounded-full overflow-hidden">
           <motion.div
@@ -320,6 +475,21 @@ function QuizSection({
             transition={{ type: 'spring', stiffness: 180, damping: 24 }}
           />
         </div>
+
+        {/* Countdown timer */}
+        <motion.div
+          animate={isLowTime ? { scale: [1, 1.08, 1] } : {}}
+          transition={{ repeat: Infinity, duration: 1 }}
+          className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[13px] font-black tabular-nums whitespace-nowrap ${
+            isLowTime
+              ? 'bg-red-50 text-red-600 ring-1 ring-red-200'
+              : 'bg-slate-100 text-slate-700'
+          }`}
+        >
+          <Clock size={13} weight="bold" />
+          {timeStr}
+        </motion.div>
+
         <span className="hidden sm:block text-[11px] font-black text-teal-700 bg-teal-50 px-3 py-1 rounded-full tracking-widest uppercase whitespace-nowrap">
           {q.topic}
         </span>
@@ -345,86 +515,40 @@ function QuizSection({
                   {q.q}
                 </p>
 
-                {/* Options */}
+                {/* Options — selectable, not locked, no green/red */}
                 <div className="flex flex-col gap-2.5">
                   {q.opts.map((opt, i) => {
-                    const isCorrectOpt = i === q.ans;
-                    const isSelectedWrong = isAnswered && i === userAns && !isCorrectOpt;
+                    const isSelected = i === userAns;
 
-                    let btnCls =
-                      'w-full flex items-center gap-4 px-5 py-4 border-[1.5px] rounded-2xl text-left text-[15px] font-medium text-slate-900 leading-snug transition-all duration-200 ';
+                    const btnCls =
+                      'w-full flex items-center gap-4 px-5 py-4 border-[1.5px] rounded-2xl text-left text-[15px] font-medium text-slate-900 leading-snug transition-all duration-150 ' +
+                      (isSelected
+                        ? 'border-teal-500 bg-teal-50'
+                        : 'border-slate-200 bg-slate-50 hover:border-teal-400 hover:bg-teal-50/60 hover:translate-x-1 active:scale-[0.99]');
 
-                    if (!isAnswered) {
-                      btnCls +=
-                        'border-slate-200 bg-slate-50 cursor-pointer hover:border-teal-500 hover:bg-teal-50 hover:translate-x-1 active:scale-[0.99]';
-                    } else if (isCorrectOpt) {
-                      btnCls += 'border-emerald-500 bg-emerald-50 cursor-default';
-                    } else if (isSelectedWrong) {
-                      btnCls += 'border-red-400 bg-red-50 cursor-default';
-                    } else {
-                      btnCls += 'border-slate-200 bg-slate-50 cursor-default opacity-60';
-                    }
-
-                    let letterCls =
-                      'flex items-center justify-center w-8 h-8 min-w-[32px] rounded-[9px] text-[13px] font-black transition-colors duration-200 ';
-
-                    if (!isAnswered) {
-                      letterCls += 'bg-slate-200 text-slate-600';
-                    } else if (isCorrectOpt) {
-                      letterCls += 'bg-emerald-500 text-white';
-                    } else if (isSelectedWrong) {
-                      letterCls += 'bg-red-500 text-white';
-                    } else {
-                      letterCls += 'bg-slate-200 text-slate-500';
-                    }
+                    const letterCls =
+                      'flex items-center justify-center w-8 h-8 min-w-[32px] rounded-[9px] text-[13px] font-black transition-colors duration-150 ' +
+                      (isSelected ? 'bg-teal-500 text-white' : 'bg-slate-200 text-slate-600');
 
                     return (
                       <button
                         key={i}
-                        disabled={isAnswered}
                         onClick={() => onPick(i)}
                         className={btnCls}
                       >
                         <span className={letterCls}>{LETTERS[i]}</span>
                         <span className="flex-1">{opt}</span>
-                        {isAnswered && isCorrectOpt && (
-                          <CheckCircle size={20} weight="fill" className="text-emerald-500 flex-shrink-0" />
-                        )}
-                        {isSelectedWrong && (
-                          <XCircle size={20} weight="fill" className="text-red-500 flex-shrink-0" />
-                        )}
                       </button>
                     );
                   })}
                 </div>
 
-                {/* Inline feedback */}
-                <AnimatePresence>
-                  {isAnswered && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.25, ease: 'easeOut' }}
-                      className={`mt-5 flex items-center gap-2.5 px-5 py-3.5 rounded-xl text-[14px] font-semibold ${
-                        userAns === q.ans
-                          ? 'bg-emerald-50 text-emerald-700'
-                          : 'bg-red-50 text-red-700'
-                      }`}
-                    >
-                      {userAns === q.ans ? (
-                        <>
-                          <CheckCircle size={17} weight="fill" />
-                          Correct!
-                        </>
-                      ) : (
-                        <>
-                          <XCircle size={17} weight="fill" />
-                          Incorrect — the correct answer is {LETTERS[q.ans]}.
-                        </>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                {/* Hint to pick before moving on */}
+                {!hasAnswer && (
+                  <p className="mt-4 text-[12px] text-slate-400 text-center">
+                    Select an answer to continue
+                  </p>
+                )}
               </div>
             </motion.div>
           </AnimatePresence>
@@ -442,21 +566,19 @@ function QuizSection({
           Previous
         </button>
 
-        {/* Progress dots */}
+        {/* Progress dots — answered vs unanswered only, no correct/wrong during quiz */}
         <div className="flex gap-1.5 items-center flex-wrap justify-center max-w-[200px]">
-          {QS.map((q, i) => {
+          {questions.map((_, i) => {
             let cls = 'h-[7px] rounded-full transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] flex-shrink-0 ';
-            if (i === cur)                 cls += 'w-5 bg-teal-600';
-            else if (answers[i] === q.ans) cls += 'w-[7px] bg-emerald-500';
-            else if (answers[i] !== null)  cls += 'w-[7px] bg-red-400';
-            else if (i < cur)              cls += 'w-[7px] bg-slate-400';
-            else                           cls += 'w-[7px] bg-slate-200';
+            if (i === cur)             cls += 'w-5 bg-teal-600';
+            else if (answers[i] !== null) cls += 'w-[7px] bg-slate-500';
+            else                       cls += 'w-[7px] bg-slate-200';
             return <div key={i} className={cls} />;
           })}
         </div>
 
         <button
-          disabled={!isAnswered}
+          disabled={!hasAnswer}
           onClick={onNext}
           className={`inline-flex items-center gap-2 px-6 py-3.5 rounded-2xl border-[1.5px] font-semibold text-[15px] transition-all duration-200 hover:-translate-y-0.5 active:scale-[0.97] disabled:opacity-30 disabled:pointer-events-none ${
             isLast
@@ -479,6 +601,7 @@ function QuizSection({
 // ── Results Screen ────────────────────────────────────────────────────────────
 
 function ResultsSection({
+  questions,
   answers,
   correctCount,
   pct,
@@ -486,6 +609,7 @@ function ResultsSection({
   onToggle,
   onRetake,
 }: {
+  questions: Question[];
   answers: (number | null)[];
   correctCount: number;
   pct: number;
@@ -493,7 +617,7 @@ function ResultsSection({
   onToggle: (i: number) => void;
   onRetake: () => void;
 }) {
-  const wrongCount = QS.length - correctCount;
+  const wrongCount = questions.length - correctCount;
 
   const resultMsg = (
     [
@@ -522,7 +646,7 @@ function ResultsSection({
           <span className="text-[clamp(72px,14vw,108px)] font-extrabold tracking-[-0.045em] leading-none text-slate-900">
             {correctCount}
           </span>
-          <span className="text-4xl font-normal text-slate-400 tracking-tight">/ {QS.length}</span>
+          <span className="text-4xl font-normal text-slate-400 tracking-tight">/ {questions.length}</span>
         </div>
         <p className="text-[18px] text-slate-500 font-medium mb-10 max-w-lg">{resultMsg}</p>
 
@@ -547,7 +671,7 @@ function ResultsSection({
           className="inline-flex items-center gap-2.5 px-7 py-3.5 rounded-2xl border-[1.5px] border-slate-200 bg-white font-semibold text-[15px] text-slate-900 transition-all duration-200 hover:border-slate-900 hover:-translate-y-0.5 active:scale-[0.97]"
         >
           <ArrowCounterClockwise size={16} weight="bold" />
-          Retake Test
+          New Test
         </button>
       </div>
 
@@ -557,13 +681,13 @@ function ResultsSection({
           Review &amp; Explanations
         </div>
         <div className="flex flex-col gap-3">
-          {QS.map((q, i) => {
+          {questions.map((q, i) => {
             const isCorrect = answers[i] === q.ans;
             const isOpen = openCards[i];
 
             return (
               <div
-                key={i}
+                key={q.id}
                 className="bg-white border border-slate-200 rounded-[18px] overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.04)]"
               >
                 <button

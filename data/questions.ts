@@ -1,6 +1,6 @@
 import type { Question } from '@/types/quiz';
 
-export const QS: Question[] = [
+export const QS: Omit<Question, 'id'>[] = [
   {
     q: 'Choose the grammatically correct sentence:',
     opts: [
