@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   const count = Math.min(Math.max(parseInt(searchParams.get('count') ?? '10', 10), 1), 100)
   const topic = searchParams.get('topic') || null
 
-  const { data, error } = await supabase.rpc('get_random_questions', {
+  const { data, error } = await getSupabase().rpc('get_random_questions', {
     p_count: count,
     p_topic: topic,
   })
