@@ -80,12 +80,20 @@ export default function GrammarTest() {
     return () => clearTimeout(id);
   }, [timeLeft, timerActive]);
 
+  const [startError, setStartError] = useState<string | null>(null);
+
   const startQuiz = async () => {
     setLoading(true);
+    setStartError(null);
     try {
       const params = new URLSearchParams({ count: String(config.count) });
       if (config.topic) params.set('topic', config.topic);
-      const qs: Question[] = await fetch(`/api/questions?${params}`).then(r => r.json());
+      const r = await fetch(`/api/questions?${params}`);
+      const qs = await r.json();
+      if (!r.ok || !Array.isArray(qs) || qs.length === 0) {
+        setStartError(qs?.error ?? 'No questions found. Please try a different topic.');
+        return;
+      }
       setQuestions(qs);
       setAnswers(Array(qs.length).fill(null));
       setOpenCards(Array(qs.length).fill(false));
@@ -94,6 +102,8 @@ export default function GrammarTest() {
       setTimeLeft(config.count === 10 ? 300 : 1200);
       setTimerActive(true);
       setScreen('quiz');
+    } catch {
+      setStartError('Network error — please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -135,6 +145,7 @@ export default function GrammarTest() {
             topics={topics}
             config={config}
             loading={loading}
+            error={startError}
             onConfigChange={setConfig}
             onStart={startQuiz}
           />
@@ -175,12 +186,14 @@ function StartSection({
   topics,
   config,
   loading,
+  error,
   onConfigChange,
   onStart,
 }: {
   topics: string[];
   config: QuizConfig;
   loading: boolean;
+  error: string | null;
   onConfigChange: (c: QuizConfig) => void;
   onStart: () => void;
 }) {
@@ -227,7 +240,7 @@ function StartSection({
   ];
 
   const topicLabel = config.topic ?? 'essential grammar';
-  const minLabel = config.count === 10 ? '~5' : '~20';
+  const minLabel = config.count === 10 ? '5' : '20';
 
   return (
     <motion.div
@@ -385,6 +398,10 @@ function StartSection({
             or Practice Mode →
           </Link>
         </motion.div>
+
+        {error && (
+          <p className="mt-3 text-[13px] text-red-500 font-medium">{error}</p>
+        )}
       </div>
 
       {/* ── Right decorative panel ── */}
