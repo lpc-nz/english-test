@@ -8,7 +8,13 @@
     "start": "next start",
     "seed": "npx tsx scripts/seed.ts",
     "seed:topics": "npx tsx scripts/seed-topics.ts",
-    "seed:grammar": "npx tsx scripts/seed-grammar-questions.ts"
+    "seed:grammar": "npx tsx scripts/seed-grammar-questions.ts",
+    "seed:test1": "npx tsx scripts/seed-test-1.ts",
+    "seed:test2": "npx tsx scripts/seed-test-2.ts",
+    "seed:test3": "npx tsx scripts/seed-test-3.ts",
+    "seed:test4": "npx tsx scripts/seed-test-4.ts",
+    "seed:batch1": "npx tsx scripts/seed-batch-1.ts",
+    "migrate:test-numbers": "npx tsx scripts/assign-test-numbers.ts"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.7",

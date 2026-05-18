@@ -5,11 +5,9 @@ export interface Question {
   ans: 0 | 1 | 2 | 3;
   topic: string;
   expl: string; // safe HTML — static content only
+  test_number?: number | null;
 }
 
 export type Screen = 'start' | 'quiz' | 'results';
 
-export interface QuizConfig {
-  count: 10 | 40;
-  topic: string | null;
-}
+export type TestId = 1 | 2 | 3 | 4;

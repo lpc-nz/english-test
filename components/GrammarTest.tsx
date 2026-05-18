@@ -11,10 +11,9 @@ import {
   CaretDown,
   BookOpen,
   Clock,
-  Globe,
 } from '@phosphor-icons/react';
 import Link from 'next/link';
-import type { Question, QuizConfig } from '@/types/quiz';
+import type { Question, TestId } from '@/types/quiz';
 
 const LETTERS = ['A', 'B', 'C', 'D'] as const;
 
@@ -55,18 +54,10 @@ export default function GrammarTest() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<(number | null)[]>([]);
   const [openCards, setOpenCards] = useState<boolean[]>([]);
-  const [topics, setTopics] = useState<string[]>([]);
-  const [config, setConfig] = useState<QuizConfig>({ count: 10, topic: null });
+  const [selectedTest, setSelectedTest] = useState<TestId | null>(null);
   const [loading, setLoading] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
   const [timerActive, setTimerActive] = useState(false);
-
-  useEffect(() => {
-    fetch('/api/topics')
-      .then(r => r.json())
-      .then(setTopics)
-      .catch(() => {});
-  }, []);
 
   // Countdown — ticks every second while timerActive; auto-submits at 0
   useEffect(() => {
@@ -83,15 +74,14 @@ export default function GrammarTest() {
   const [startError, setStartError] = useState<string | null>(null);
 
   const startQuiz = async () => {
+    if (!selectedTest) return;
     setLoading(true);
     setStartError(null);
     try {
-      const params = new URLSearchParams({ count: String(config.count) });
-      if (config.topic) params.set('topic', config.topic);
-      const r = await fetch(`/api/questions?${params}`);
+      const r = await fetch(`/api/tests/${selectedTest}`);
       const qs = await r.json();
       if (!r.ok || !Array.isArray(qs) || qs.length === 0) {
-        setStartError(qs?.error ?? 'No questions found. Please try a different topic.');
+        setStartError(qs?.error ?? 'No questions found for this test.');
         return;
       }
       setQuestions(qs);
@@ -99,7 +89,7 @@ export default function GrammarTest() {
       setOpenCards(Array(qs.length).fill(false));
       setCur(0);
       setDir(1);
-      setTimeLeft(config.count === 10 ? 300 : 1200);
+      setTimeLeft(qs.length * 30);
       setTimerActive(true);
       setScreen('quiz');
     } catch {
@@ -142,11 +132,10 @@ export default function GrammarTest() {
         {screen === 'start' && (
           <StartSection
             key="start"
-            topics={topics}
-            config={config}
+            selectedTest={selectedTest}
             loading={loading}
             error={startError}
-            onConfigChange={setConfig}
+            onSelectTest={setSelectedTest}
             onStart={startQuiz}
           />
         )}
@@ -182,65 +171,27 @@ export default function GrammarTest() {
 
 // ── Start Screen ──────────────────────────────────────────────────────────────
 
+const TEST_META = [
+  { id: 1 as TestId, title: 'Test 1', sub: 'Everyday Life', count: 63, time: '32', topics: 'All 55 grammar points · home & family context' },
+  { id: 2 as TestId, title: 'Test 2', sub: 'Work & Travel', count: 63, time: '32', topics: 'All 55 grammar points · office & travel context' },
+  { id: 3 as TestId, title: 'Test 3', sub: 'Sports & Hobbies', count: 63, time: '32', topics: 'All 55 grammar points · sports & leisure context' },
+  { id: 4 as TestId, title: 'Test 4', sub: 'Technology & Environment', count: 63, time: '32', topics: 'All 55 grammar points · tech & science context' },
+] as const;
+
 function StartSection({
-  topics,
-  config,
+  selectedTest,
   loading,
   error,
-  onConfigChange,
+  onSelectTest,
   onStart,
 }: {
-  topics: string[];
-  config: QuizConfig;
+  selectedTest: TestId | null;
   loading: boolean;
   error: string | null;
-  onConfigChange: (c: QuizConfig) => void;
+  onSelectTest: (t: TestId) => void;
   onStart: () => void;
 }) {
-  const decorativePanels = [
-    {
-      icon: <Clock size={18} weight="bold" className="text-white" />,
-      title: 'Tenses',
-      sub: 'Present, Past, Perfect',
-    },
-    {
-      icon: <BookOpen size={18} weight="bold" className="text-white" />,
-      title: 'Modal Verbs',
-      sub: 'Can, Must, Should, Would',
-    },
-    {
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-          <circle cx="9" cy="7" r="4" />
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-          <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-        </svg>
-      ),
-      title: 'Subject-Verb Agreement',
-      sub: 'Singular & Plural rules',
-    },
-    {
-      icon: (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="17 1 21 5 17 9" />
-          <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-          <polyline points="7 23 3 19 7 15" />
-          <path d="M21 13v2a4 4 0 0 1-4 4H3" />
-        </svg>
-      ),
-      title: 'Conditionals & Passive',
-      sub: 'Type 2, Modal Passive',
-    },
-    {
-      icon: <Globe size={18} weight="bold" className="text-white" />,
-      title: 'Gerunds & Infinitives',
-      sub: 'Verb + -ing / to-V',
-    },
-  ];
-
-  const topicLabel = config.topic ?? 'essential grammar';
-  const minLabel = config.count === 10 ? '5' : '20';
+  const active = TEST_META.find(t => t.id === selectedTest) ?? null;
 
   return (
     <motion.div
@@ -278,75 +229,46 @@ function StartSection({
           transition={{ delay: 0.15, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
           className="text-[17px] text-slate-500 leading-relaxed max-w-[460px] mb-8"
         >
-          {config.count} questions covering {topicLabel} rules. Answer each question and get a detailed explanation in Vietnamese.
+          Choose a test below. Each test covers a fixed set of grammar points with Vietnamese explanations.
         </motion.p>
 
-        {/* ── Config: count + topic ── */}
+        {/* ── Test selector ── */}
         <motion.div
           {...fadeUp}
           animate={{ ...fadeUp.animate }}
           transition={{ delay: 0.18, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="mb-8 space-y-4"
+          className="mb-8"
         >
-          {/* Count selector */}
-          <div>
-            <span className="text-[11px] font-black text-slate-400 tracking-[0.08em] uppercase mb-2 block">
-              Test Length
-            </span>
-            <div className="flex gap-3">
-              {([
-                { count: 10, label: 'Short', sub: '10 questions · ~5 min' },
-                { count: 40, label: 'Full', sub: '40 questions · ~20 min' },
-              ] as const).map(({ count, label, sub }) => (
+          <span className="text-[11px] font-black text-slate-400 tracking-[0.08em] uppercase mb-3 block">
+            Select a Test
+          </span>
+          <div className="grid grid-cols-2 gap-3">
+            {TEST_META.map(t => {
+              const isActive = selectedTest === t.id;
+              return (
                 <button
-                  key={count}
-                  onClick={() => onConfigChange({ ...config, count })}
-                  className={`flex flex-col gap-0.5 px-5 py-3 rounded-xl text-left transition-all duration-150 border-[1.5px] ${
-                    config.count === count
+                  key={t.id}
+                  onClick={() => onSelectTest(t.id)}
+                  className={`flex flex-col gap-1 px-5 py-4 rounded-2xl text-left transition-all duration-150 border-[1.5px] ${
+                    isActive
                       ? 'bg-slate-900 text-white border-slate-900'
-                      : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400 hover:-translate-y-0.5'
                   }`}
                 >
-                  <span className="text-[14px] font-bold">{label}</span>
-                  <span className={`text-[11px] font-medium ${config.count === count ? 'text-white/60' : 'text-slate-400'}`}>{sub}</span>
+                  <span className={`text-[11px] font-black tracking-[0.07em] uppercase ${isActive ? 'text-teal-400' : 'text-teal-600'}`}>
+                    {t.title}
+                  </span>
+                  <span className="text-[14px] font-bold leading-snug">{t.sub}</span>
+                  <span className={`text-[12px] font-medium mt-0.5 ${isActive ? 'text-white/55' : 'text-slate-400'}`}>
+                    {t.count} questions · ~{t.time} min
+                  </span>
                 </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Topic selector */}
-          <div>
-            <span className="text-[11px] font-black text-slate-400 tracking-[0.08em] uppercase mb-2 block">
-              Topic
-            </span>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => onConfigChange({ ...config, topic: null })}
-                className={`px-3 py-1.5 rounded-xl text-[13px] font-semibold transition-all duration-150 ${
-                  config.topic === null
-                    ? 'bg-teal-600 text-white'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                All Topics
-              </button>
-              {topics.map(t => (
-                <button
-                  key={t}
-                  onClick={() => onConfigChange({ ...config, topic: t })}
-                  className={`px-3 py-1.5 rounded-xl text-[13px] font-semibold transition-all duration-150 ${
-                    config.topic === t
-                      ? 'bg-teal-600 text-white'
-                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </motion.div>
 
+        {/* Stats row */}
         <motion.div
           {...fadeUp}
           animate={{ ...fadeUp.animate }}
@@ -354,8 +276,8 @@ function StartSection({
           className="flex items-stretch mb-12"
         >
           {[
-            { val: String(config.count), lbl: 'Questions' },
-            { val: `~${minLabel}`, lbl: 'Minutes' },
+            { val: active ? String(active.count) : '—', lbl: 'Questions' },
+            { val: active ? `~${active.time}` : '—', lbl: 'Minutes' },
             { val: 'VI', lbl: 'Explanations' },
           ].map((m, i) => (
             <div
@@ -376,10 +298,10 @@ function StartSection({
         >
           <button
             onClick={onStart}
-            disabled={loading}
-            className="inline-flex items-center gap-2.5 bg-slate-900 text-white font-semibold text-[16px] px-8 py-[18px] rounded-2xl transition-all duration-200 ease-out hover:bg-teal-600 hover:-translate-y-0.5 active:scale-[0.97] group disabled:opacity-70 disabled:pointer-events-none"
+            disabled={loading || !selectedTest}
+            className="inline-flex items-center gap-2.5 bg-slate-900 text-white font-semibold text-[16px] px-8 py-[18px] rounded-2xl transition-all duration-200 ease-out hover:bg-teal-600 hover:-translate-y-0.5 active:scale-[0.97] group disabled:opacity-40 disabled:pointer-events-none"
           >
-            {loading ? 'Loading...' : 'Start Test'}
+            {loading ? 'Loading...' : selectedTest ? `Start Test ${selectedTest}` : 'Select a test'}
             {loading ? (
               <span className="w-[18px] h-[18px] border-2 border-white/30 border-t-white rounded-full animate-spin" />
             ) : (
@@ -415,22 +337,29 @@ function StartSection({
           }}
         />
         <div className="relative flex flex-col gap-3 w-full max-w-[340px]">
-          {decorativePanels.map((t, i) => (
-            <motion.div
-              key={t.title}
+          {TEST_META.map((t, i) => (
+            <motion.button
+              key={t.id}
+              onClick={() => onSelectTest(t.id)}
               initial={{ x: 24, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               transition={{ delay: 0.15 + i * 0.07, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-              className="flex items-center gap-4 bg-white/[0.06] border border-white/10 rounded-2xl px-5 py-4"
+              className={`flex items-center gap-4 rounded-2xl px-5 py-4 text-left transition-all duration-150 border ${
+                selectedTest === t.id
+                  ? 'bg-teal-600/20 border-teal-500/50'
+                  : 'bg-white/[0.06] border-white/10 hover:bg-white/[0.10]'
+              }`}
             >
-              <div className="w-9 h-9 rounded-xl bg-teal-600 flex items-center justify-center flex-shrink-0">
-                {t.icon}
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 font-extrabold text-[15px] ${
+                selectedTest === t.id ? 'bg-teal-500 text-white' : 'bg-white/10 text-white/80'
+              }`}>
+                {t.id}
               </div>
               <div>
-                <div className="text-white font-bold text-[15px] leading-snug">{t.title}</div>
-                <div className="text-white/55 text-[13px] mt-0.5">{t.sub}</div>
+                <div className="text-white font-bold text-[15px] leading-snug">{t.sub}</div>
+                <div className="text-white/55 text-[13px] mt-0.5">{t.topics}</div>
               </div>
-            </motion.div>
+            </motion.button>
           ))}
         </div>
       </div>
